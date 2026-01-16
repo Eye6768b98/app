@@ -1,0 +1,116 @@
+// Basic scene setup
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x202030);
+
+const camera = new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(0, 10, 20);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lights
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(10, 20, 10);
+scene.add(dirLight);
+
+// Ground
+const groundGeo = new THREE.PlaneGeometry(40, 40);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x303030 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Witch (player) – a purple box
+const witchGeo = new THREE.BoxGeometry(1, 2, 1);
+const witchMat = new THREE.MeshStandardMaterial({ color: 0x9933ff });
+const witch = new THREE.Mesh(witchGeo, witchMat);
+witch.position.set(0, 1, 0);
+scene.add(witch);
+
+// Butterfly (target) – a yellow box
+const butterflyGeo = new THREE.BoxGeometry(1, 1, 1);
+const butterflyMat = new THREE.MeshStandardMaterial({ color: 0xffdd33 });
+const butterfly = new THREE.Mesh(butterflyGeo, butterflyMat);
+butterfly.position.set(5, 0.5, 5);
+scene.add(butterfly);
+
+// Movement state
+const keys = {
+  ArrowUp: false,
+  ArrowDown: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+};
+
+window.addEventListener("keydown", (e) => {
+  if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+});
+
+window.addEventListener("keyup", (e) => {
+  if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+});
+
+// Resize handling
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Helper: random butterfly position
+function randomButterflyPosition() {
+  const range = 15;
+  butterfly.position.set(
+    (Math.random() - 0.5) * range * 2,
+    0.5,
+    (Math.random() - 0.5) * range * 2
+  );
+}
+
+// Simple collision check
+function checkCollision() {
+  const dist = witch.position.distanceTo(butterfly.position);
+  return dist < 1.5;
+}
+
+// Game loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+
+  const delta = clock.getDelta();
+  const speed = 8; // movement units per second
+
+  // Move witch with arrow keys
+  if (keys.ArrowUp) witch.position.z -= speed * delta;
+  if (keys.ArrowDown) witch.position.z += speed * delta;
+  if (keys.ArrowLeft) witch.position.x -= speed * delta;
+  if (keys.ArrowRight) witch.position.x += speed * delta;
+
+  // Keep witch roughly within bounds
+  witch.position.x = THREE.MathUtils.clamp(witch.position.x, -18, 18);
+  witch.position.z = THREE.MathUtils.clamp(witch.position.z, -18, 18);
+
+  // Make butterfly float a bit
+  butterfly.position.y = 0.5 + Math.sin(performance.now() * 0.003) * 0.3;
+
+  // Check collision
+  if (checkCollision()) {
+    randomButterflyPosition();
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
